@@ -14,7 +14,7 @@ $origin = Vector[0.0, 0.0, 0.0]
 # scene
 $viewport_width = 1.0
 $viewport_height = 1.0
-$projection_plane_d = 0.1
+$projection_plane_d = 1.0
 $spheres = [
   {
     center: Vector[0.0, -1.0, 3.0],
@@ -129,19 +129,14 @@ $go = true
 render do
   if $go
     for x in (-$width / 2.0).to_i..($width / 2.0).to_i do
-      # podziałka co 10 pikseli
-      if x % 10 == 0
-        # linie układu współrzędnych
-        draw_pixel(x, 0, [0.0, 1.0, 0.0, 1.0])
-        draw_pixel(0, x, [0.0, 1.0, 0.0, 1.0])
-        # linie namierzające punkt
-        # draw_pixel(x, 50, [1.0, 0.0, 0.0, 1.0])
-        # draw_pixel(270, x, [1.0, 0.0, 0.0, 1.0])
-      end
+      # if x % 10 == 0
+      #   # linie układu współrzędnych
+      #   draw_pixel(x, 0, [0.0, 1.0, 0.0, 1.0])
+      #   draw_pixel(0, x, [0.0, 1.0, 0.0, 1.0])
+      # end
 
       for y in (-$height / 2.0).to_i..($height / 2.0).to_i do
         d = canvas_to_viewport(x, y)
-        # binding.pry
         color = trace_ray($origin, d, 1.0, Float::INFINITY)
 
         puts "#{((((x + $width * 0.5) * $height + y + $height * 0.5) / ($width * $height)) * 100).round(2)}%"
