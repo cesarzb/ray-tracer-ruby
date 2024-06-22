@@ -2,22 +2,18 @@
 
 require 'ruby2d'
 require 'matrix'
-require 'pry'
-require 'pry-nav'
 
-$width = 640.0
-$height = 640.0
-$background_color = [1.0, 1.0, 1.0, 1.0]
-$recursion_depth = 3
-$origin = Vector[0.0, 0.0, 0.0]
-$recursion_depth = 3
+WIDTH = 640.0
+HEIGHT = 640.0
+BG_COLOR = Vector[1.0, 1.0, 1.0, 1.0]
+RECURSION_DEPTHT = 3
+ORIGIN = Vector[0.0, 0.0, 0.0]
 # scene
-$viewport_width = 1.0
-$viewport_height = 1.0
-$projection_plane_d = 1.0
+VIEWPORT_WIDTH = 1.0
+VIEWPORT_HEIGHT = 1.0
+PROJECTION_PLANE_D = 1.0
 $pressed = false
-$transformation_pace = 0.5
-$text_color = 'black'
+TRANSFORMATION_PACE = 0.5
 
 $size = 16
 
@@ -26,10 +22,10 @@ $spheres = [
   {
     center: Vector[-1.0, 0.0, 3.0],
     radius: 0.5,
-    color: [130.0 / 255.0, 130.0 / 255.0, 120.0 / 255.0, 1.0],
+    color: Vector[130.0 / 255.0, 130.0 / 255.0, 120.0 / 255.0, 1.0],
     reflective: 0.8,
     alpha: 500.0,
-    k_s: 0.8,
+    k_s: 1.02,
     k_d: 0.2,
     k_a: 0.1
   },
@@ -37,7 +33,7 @@ $spheres = [
   {
     center: Vector[1.0, 0.0, 3.0],
     radius: 0.5,
-    color: [230.0 / 255.0, 230.0 / 255.0, 150.0 / 255.0, 1.0],
+    color: Vector[230.0 / 255.0, 230.0 / 255.0, 150.0 / 255.0, 1.0],
     reflective: 0.001,
     alpha: 100.0,
     k_s: 0.1,
@@ -48,10 +44,10 @@ $spheres = [
   {
     center: Vector[-1.0, 1.0, 6.0],
     radius: 0.5,
-    color: [30.0 / 255.0, 170.0 / 255.0, 0.0 / 255.0, 1.0],
+    color: Vector[30.0 / 255.0, 170.0 / 255.0, 0.0 / 255.0, 1.0],
     reflective: 0.005,
     alpha: 100.0,
-    k_s: 0.1,
+    k_s: 1.02,
     k_d: 0.8,
     k_a: 0.5
   },
@@ -59,7 +55,7 @@ $spheres = [
   {
     center: Vector[1.0, 1.0, 6.0],
     radius: 0.5,
-    color: [90.0 / 255.0, 60.0 / 255.0, 0.0 / 255.0, 1.0],
+    color: Vector[90.0 / 255.0, 60.0 / 255.0, 0.0 / 255.0, 1.0],
     reflective: 0.001,
     alpha: 10.0,
     k_s: 0.1,
@@ -70,7 +66,7 @@ $spheres = [
   {
     center: Vector[0.0, -5001.0, 0.0],
     radius: 5000.0,
-    color: [255.0 / 255.0, 255.0 / 255.0, 0.0 / 255.0, 1.0],
+    color: Vector[255.0 / 255.0, 255.0 / 255.0, 0.0 / 255.0, 1.0],
     reflective: 0.001,
     alpha: 10.0,
     k_s: 0.1,
@@ -96,14 +92,14 @@ $lights = [
   # }
 ]
 
-set width: $width, height: $height
+set width: WIDTH, height: HEIGHT
 
 def draw_pixel(x, y, color)
-  Pixel.draw(x: ($width / 2.0) + x, y: ($height / 2.0) - y, size: $size, color: color)
+  Pixel.draw(x: (WIDTH / 2.0) + x, y: (HEIGHT / 2.0) - y, size: $size, color: color)
 end
 
 def canvas_to_viewport(x, y)
-  Vector[x * $viewport_width / $width, y * $viewport_height / $height, $projection_plane_d]
+  Vector[x * VIEWPORT_WIDTH / WIDTH, y * VIEWPORT_HEIGHT / HEIGHT, PROJECTION_PLANE_D]
 end
 
 def reflect_ray(ray, normal)
@@ -162,14 +158,14 @@ end
 
 def trace_ray(origin, d, t_min, t_max, recursion_depth)
   closest_sphere, closest_t = closest_intersection(origin, d, t_min, t_max)
-  return $background_color unless closest_sphere
+  return BG_COLOR unless closest_sphere
 
   point = origin + closest_t * d
   normal = point - closest_sphere[:center]
   normal /= normal.norm
   computed_light = compute_lighting(point, normal, -d, closest_sphere[:k_s],
                                     closest_sphere[:k_d], closest_sphere[:k_a], closest_sphere[:alpha])
-  local_color = closest_sphere[:color].map { |el| el * computed_light }
+  local_color = closest_sphere[:color] * computed_light
 
   reflective = closest_sphere[:reflective]
   return local_color if recursion_depth <= 0 || reflective < 0
@@ -177,9 +173,7 @@ def trace_ray(origin, d, t_min, t_max, recursion_depth)
   reflection = reflect_ray(-d, normal)
   reflected_color = trace_ray(point, reflection, 0.001, Float::INFINITY, recursion_depth - 1)
 
-  (Vector.elements(local_color.map { |el| el * (1 - reflective) }) + Vector.elements(reflected_color.map do |el|
-                                                                                       el * reflective
-                                                                                     end)).to_a
+  local_color * (1 - reflective) + reflected_color * reflective
 end
 
 def intersect_ray_sphere(origin, d, sphere)
@@ -198,63 +192,54 @@ def intersect_ray_sphere(origin, d, sphere)
   [t1, t2]
 end
 
-def handle_keyboard
-  on :key_down do |event|
-    unless $pressed
-      if event.key == '['
-        $size += 1
-      elsif event.key == ']' && $size - 1 > 0
-        $size -= 1
-      elsif event.key == 'w'
-        $lights[1][:position] += Vector[0, 0, $transformation_pace]
-      elsif event.key == 's'
-        $lights[1][:position] -= Vector[0, 0, $transformation_pace]
-      elsif event.key == 'a'
-        $lights[1][:position] -= Vector[$transformation_pace, 0, 0]
-      elsif event.key == 'd'
-        $lights[1][:position] += Vector[$transformation_pace, 0, 0]
-      elsif event.key == 'z'
-        $lights[1][:position] += Vector[0, $transformation_pace, 0]
-      elsif event.key == 'x'
-        $lights[1][:position] -= Vector[0, $transformation_pace, 0]
-      elsif event.key == '-' && $lights[1][:intensity] - 0.1 >= 0
-        $lights[1][:intensity] -= 0.1
-      elsif event.key == '='
-        $lights[1][:intensity] += 0.1
-      elsif event.key == 'r'
-        $size = 4
-        $lights[1][:position] = Vector[1, 3, -4]
-        $lights[1][:intensity] = 1.6
-      elsif event.key == '0'
-        $size = 1
-      elsif event.key == '1'
-        $size = 2
-      elsif event.key == '2'
-        $size = 4
-      elsif event.key == '3'
-        $size = 8
-      elsif event.key == '4'
-        $size = 16
-      elsif event.key == '5'
-        $size = 32
-      elsif event.key == '6'
-        $size = 64
-      elsif event.key == '7'
-        $size = 128
-      elsif event.key == '8'
-        $size = 256
-      elsif event.key == '9'
-        $size = 512
-      end
-
-    end
-    $stale = true
-    $cache = []
-    $pressed = true
+on :key do |event|
+  if event.key == '['
+    $size += 1
+  elsif event.key == ']' && $size - 1 > 0
+    $size -= 1
+  elsif event.key == 'w'
+    $lights[1][:position] += Vector[0, 0, TRANSFORMATION_PACE]
+  elsif event.key == 's'
+    $lights[1][:position] -= Vector[0, 0, TRANSFORMATION_PACE]
+  elsif event.key == 'a'
+    $lights[1][:position] -= Vector[TRANSFORMATION_PACE, 0, 0]
+  elsif event.key == 'd'
+    $lights[1][:position] += Vector[TRANSFORMATION_PACE, 0, 0]
+  elsif event.key == 'z'
+    $lights[1][:position] += Vector[0, TRANSFORMATION_PACE, 0]
+  elsif event.key == 'x'
+    $lights[1][:position] -= Vector[0, TRANSFORMATION_PACE, 0]
+  elsif event.key == '-' && $lights[1][:intensity] - 0.1 >= 0
+    $lights[1][:intensity] -= 0.1
+  elsif event.key == '='
+    $lights[1][:intensity] += 0.1
+  elsif event.key == 'r'
+    $size = 4
+    $lights[1][:position] = Vector[1, 3, -4]
+    $lights[1][:intensity] = 1.6
+  elsif event.key == '0'
+    $size = 1
+  elsif event.key == '1'
+    $size = 2
+  elsif event.key == '2'
+    $size = 4
+  elsif event.key == '3'
+    $size = 8
+  elsif event.key == '4'
+    $size = 16
+  elsif event.key == '5'
+    $size = 32
+  elsif event.key == '6'
+    $size = 64
+  elsif event.key == '7'
+    $size = 128
+  elsif event.key == '8'
+    $size = 256
+  elsif event.key == '9'
+    $size = 512
   end
-  on :key_up do |_event|
-    $pressed = false
-  end
+  $stale = true
+  $cache = []
 end
 
 def render_info_to_console(x, y)
@@ -262,19 +247,18 @@ def render_info_to_console(x, y)
   puts "Light position: [#{$lights[1][:position][0]}, #{$lights[1][:position][1]}, #{$lights[1][:position][2]}]"
   puts "Light intensity: #{$lights[1][:intensity]}"
   puts "Pixel size: #{$size}"
-  puts "#{((((x + $width * 0.5) * $height + y + $height * 0.5) / ($width * $height)) * 100).round(2)}%"
+  puts "#{((((x + WIDTH * 0.5) * HEIGHT + y + HEIGHT * 0.5) / (WIDTH * HEIGHT)) * 100).round(2)}%"
 end
 $cache = []
 $stale = true
-render do
-  handle_keyboard
+update do
   index = 0
-  for x in ((-$width / 2.0).to_i..($width / 2.0).to_i).step($size) do
-    for y in ((-$height / 2.0).to_i..($height / 2.0).to_i).step($size) do
+  for x in ((-WIDTH / 2.0).to_i..(WIDTH / 2.0).to_i).step($size) do
+    for y in ((-HEIGHT / 2.0).to_i..(HEIGHT / 2.0).to_i).step($size) do
       if $stale
         d = canvas_to_viewport(x, y)
-        color = trace_ray($origin, d, 1.0, Float::INFINITY, $recursion_depth)
-        render_info_to_console(x, y)
+        color = trace_ray(ORIGIN, d, 1.0, Float::INFINITY, RECURSION_DEPTHT)
+        # render_info_to_console(x, y)
         $cache << color
         draw_pixel(x, y, color)
       else
